@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src https://script.google.com https://script.googleusercontent.com; manifest-src 'self'; worker-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <title>Mail Hub</title>
+  <meta name="description" content="One inbox for College, Main and Personal mail.">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#151b22" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="light dark">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Mail Hub">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="preload" href="fonts/atkinson-hyperlegible-next-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/atkinson-hyperlegible-next-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <!-- First run: connect this device -->
+  <main id="setup" class="setup" hidden>
+    <div class="setup-inner">
+      <svg class="mark" viewBox="0 0 48 48" aria-hidden="true">
+        <rect x="6" y="10" width="36" height="7" rx="2" class="mark-c"/>
+        <rect x="6" y="20.5" width="36" height="7" rx="2" class="mark-m"/>
+        <rect x="6" y="31" width="36" height="7" rx="2" class="mark-p"/>
+      </svg>
+      <h1>Connect this device</h1>
+      <p>Open the link that the Mail Hub script logs when you run <strong>makeConnectLink</strong>, or paste the link or its code here.</p>
+      <form id="connect-form" class="connect-form" novalidate>
+        <label for="connect-input">Connection link or code</label>
+        <input id="connect-input" name="code" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" required>
+        <p id="connect-error" class="field-error" role="alert" hidden></p>
+        <button type="submit" class="btn btn-primary">Connect</button>
+      </form>
+      <p class="setup-alt"><button type="button" id="try-demo" class="link-btn">Look around with sample mail</button></p>
+    </div>
+  </main>
+
+  <!-- The inbox -->
+  <div id="app" class="app" hidden>
+    <section class="list-pane" aria-label="Mail list">
+      <header class="list-head">
+        <nav class="accounts" id="accounts" aria-label="Show mail from"></nav>
+        <div class="head-row">
+          <div class="search">
+            <svg class="i" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m13 13 4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            <input id="search" type="search" placeholder="Search mail" aria-label="Search sender, subject or text" autocomplete="off" enterkeyhint="search">
+          </div>
+          <div class="tasks-slot" id="tasks-slot"></div>
+          <button type="button" class="sync-btn" id="sync-btn" aria-haspopup="dialog">
+            <svg class="i" viewBox="0 0 20 20" aria-hidden="true"><path d="M16 10a6 6 0 1 1-1.8-4.3M16 3.5V6h-2.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span id="sync-label">Not synced</span>
+          </button>
+        </div>
+        <p id="banner" class="banner" role="status" hidden></p>
+      </header>
+      <div class="list-scroll" id="list-scroll">
+        <div id="list"></div>
+      </div>
+    </section>
+
+    <section class="reader" id="reader" aria-label="Selected mail" tabindex="-1">
+      <div class="reader-empty" id="reader-empty"></div>
+      <article class="mail" id="mail" hidden>
+        <div class="mail-top">
+          <button type="button" class="back-btn" id="back-btn">
+            <svg class="i" viewBox="0 0 20 20" aria-hidden="true"><path d="M12.5 4.5 7 10l5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Inbox</span>
+          </button>
+        </div>
+        <div class="mail-scroll" id="mail-scroll">
+          <div class="mail-inner">
+            <h1 class="mail-subject" id="mail-subject"></h1>
+            <div class="mail-meta">
+              <p class="mail-from" id="mail-from"></p>
+              <p class="mail-when" id="mail-when"></p>
+              <p class="mail-to" id="mail-to"></p>
+            </div>
+            <ul class="mail-files" id="mail-files" aria-label="Attachments" hidden></ul>
+            <div class="mail-body" id="mail-body"></div>
+          </div>
+        </div>
+        <div class="mail-actions">
+          <button type="button" class="btn btn-primary" id="done-btn">Mark done</button>
+          <button type="button" class="btn btn-quiet" id="task-from-mail">Add task</button>
+          <a class="btn btn-quiet" id="gmail-link" target="_blank" rel="noopener noreferrer">Open in Gmail</a>
+        </div>
+      </article>
+    </section>
+  </div>
+
+  <dialog id="sync-dialog" class="sheet" aria-labelledby="sync-title">
+    <div class="sheet-inner">
+      <h2 id="sync-title">Sync</h2>
+      <p id="sync-summary" class="sheet-lead"></p>
+      <table class="fresh">
+        <caption>Latest export from each account</caption>
+        <tbody id="fresh-body"></tbody>
+      </table>
+      <p id="fresh-note" class="sheet-note" hidden></p>
+      <div class="sheet-actions">
+        <button type="button" class="btn btn-primary" id="sync-now">Sync now</button>
+        <button type="button" class="btn btn-quiet" id="sync-close">Close</button>
+      </div>
+      <p class="sheet-foot"><button type="button" class="link-btn" id="disconnect">Disconnect this device</button></p>
+    </div>
+  </dialog>
+
+  <dialog id="task-dialog" class="sheet" aria-labelledby="task-dialog-title">
+    <div class="sheet-inner">
+      <h2 id="task-dialog-title">New task</h2>
+      <p id="task-dialog-from" class="sheet-lead" hidden></p>
+      <div class="task-fields">
+        <label for="task-title">Task</label>
+        <input id="task-title" type="text" maxlength="200" autocomplete="off" enterkeyhint="done">
+        <label for="task-due">Due</label>
+        <input id="task-due" type="date">
+      </div>
+      <div class="sheet-actions">
+        <button type="button" class="btn btn-primary" id="task-save">Add task</button>
+        <button type="button" class="btn btn-quiet" id="task-cancel">Cancel</button>
+      </div>
+      <p class="sheet-foot" id="task-delete-row" hidden><button type="button" class="link-btn danger" id="task-delete">Delete this task</button></p>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden>
+    <span id="toast-text"></span>
+    <button type="button" class="toast-btn" id="toast-btn">Undo</button>
+  </div>
+</body>
+</html>
